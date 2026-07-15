@@ -1,32 +1,31 @@
 # UAV_yolo12
 
-A UAV small-object detection repository based on Ultralytics YOLO. The current project mainly focuses on `ScaleConsistencyCoupledSAEM` and its ablation variants, with VisDrone as the primary dataset.
+An experimental repository for UAV small-object detection built on Ultralytics YOLO. The current work mainly revolves around `ScaleConsistencyCoupledSAEM`, with VisDrone as the primary dataset.
 
 Core project files:
 
-- `custom_blocks.py`: custom modules and ablation modules
-- `configs/*.yaml`: different model structures and ablation configs
-- `trainSCFEYOLO.py`: training entry point, which first registers the custom modules and then hands the model over to Ultralytics
-- `tools/manual_flops.py`: manual parameter and FLOPs counter
+- `custom_blocks.py`: custom modules and ablation variants
+- `configs/*.yaml`: model definitions and ablation configs
+- `trainSCFEYOLO.py`: training entry point that registers the custom modules 
 
 ## 1. Environment
 
-It is recommended to use a dedicated Conda environment.
+Using a dedicated Conda environment is recommended.
 
-Recommended new environment:
+Recommended setup:
 
 ```bash
 conda create -n scfe-yolo python=3.8 -y
 conda activate scfe-yolo
 ```
 
-Install PyTorch. If you use a GPU, please choose the command that matches your local CUDA version from the official PyTorch page:
+Install PyTorch. If you are using a GPU, choose the command that matches your local CUDA version from the official PyTorch installation page:
 
 ```bash
 pip install torch==2.4.1 torchvision==0.19.1
 ```
 
-Install Ultralytics and common dependencies:
+Install Ultralytics and the common dependencies:
 
 ```bash
 pip install ultralytics==8.4.22
@@ -35,13 +34,15 @@ pip install opencv-python==4.12.0.88 pandas==2.0.3 scipy==1.10.1 tqdm==4.67.1 ma
 
 ## 2. Dataset
 
-The repository already contains a `datasets/VisDrone/` directory, including images, labels, and raw archives. The default training setting uses:
+The default training script uses:
 
 ```python
 model.train(data="VisDrone.yaml", ...)
 ```
 
-If you do not yet have `VisDrone.yaml` in your environment, you can create one following the Ultralytics detection data format, for example:
+If you already have your own dataset and a dataset YAML file, edit that YAML so it points to the correct dataset root and class definitions for your setup. If you have not prepared VisDrone locally, keeping `data="VisDrone.yaml"` will let Ultralytics automatically download and prepare the VisDrone dataset for training.
+
+If you need to create or customize `VisDrone.yaml`, follow the Ultralytics detection data format, for example:
 
 ```yaml
 path: ./datasets/VisDrone
@@ -62,37 +63,35 @@ names:
   9: motor
 ```
 
-If your class definitions or label indices are different, please modify `names` according to your actual data.
+If your class definitions or label indices are different, update `names` to match your own data.
+
+For scale-perturbation dataset generation, you can use `dataset_scalePerturb.py` to build high-view variants from a YOLO-format dataset while updating labels automatically. By default, it reads from `./datasets/VisDrone` and writes the generated datasets under `./datasets/`.
 
 ## 3. Quick Start
 
-You need to register the custom modules before training, otherwise the Ultralytics model parser cannot recognize the custom layer names in `configs/*.yaml`. The current training script already handles this step:
+Before training, you need to register the custom modules. Otherwise, the Ultralytics model parser will not recognize the custom layer names used in `configs/*.yaml`. The current training script already handles this:
 
 ```python
 from ultralytics import YOLO
 from custom_blocks import register_custom_modules
 
 register_custom_modules()
-model = YOLO("configs/NSR.yaml")
+model = YOLO("configs/SCFE-YOLO.yaml")
 ```
 
-Run directly:
+Run:
 
 ```bash
 python trainSCFEYOLO.py
 ```
 
-See the default training entry in [trainSCFEYOLO.py](trainSCFEYOLO.py).
+The default training entry is [trainSCFEYOLO.py](trainSCFEYOLO.py).
 
-If you want to switch to other structures, you can directly modify:
+If you want to switch to a different structure, modify the config path directly:
 
 ```python
 model = YOLO("configs/SCFE-YOLO.yaml")
-model = YOLO("configs/NSRBR.yaml")
-model = YOLO("configs/NSRBRCC.yaml")
-model = YOLO("configs/wobranchrouter.yaml")
-model = YOLO("configs/nospatialgate.yaml")
-model = YOLO("configs/noFE.yaml")
+model = YOLO("configs/AF-YOLO.yaml")
 ```
 
 ## 4. Configs
@@ -101,20 +100,6 @@ The main configs currently included in this repository are:
 
 - `configs/SCFE-YOLO.yaml`
   Full model using `ScaleConsistencyCoupledSAEM`
-- `configs/NSR.yaml`
-  Keeps NSR only
-- `configs/NSRBR.yaml`
-  NSR + BR
-- `configs/NSRBRCC.yaml`
-  NSR + BR + CSP
-- `configs/wobranchrouter.yaml`
-  Removes the Branch Router
-- `configs/nospatialgate.yaml`
-  Removes DSG / Spatial Gate
-- `configs/noFE.yaml`
-  Removes native enhancement and keeps only the cross-scale coupling path
-- `configs/nop5.yaml`
-  Removes the deepest P5 stage
 - `configs/AF-YOLO.yaml`
   Another AF-YOLO-style structure retained in the repository
 
@@ -123,25 +108,11 @@ The main configs currently included in this repository are:
 The custom modules are defined in [custom_blocks.py](custom_blocks.py). The main ones currently included are:
 
 - `ScaleAwareEdgeMixer`
-  A basic multi-branch texture/context/edge mixing module
+  Base multi-branch texture/context/edge mixing module
 - `ScaleConsistencyCoupledSAEM`
-  The full SCC-SAEM, including NSR, BR, CSP, CGA, and DSG
-- `ScaleConsistencyCoupledSAEMNSR`
-  Keeps only native-scale reference construction
-- `ScaleConsistencyCoupledSAEMNSRBR`
-  NSR + BR
-- `ScaleConsistencyCoupledSAEMNSRBRCSP`
-  NSR + BR + CSP
-- `ScaleConsistencyCoupledSAEMNSRBRCSPCGA`
-  NSR + BR + CSP + CGA
-- `ScaleConsistencyCoupledSAEMNoBranchRouter`
-  Removes the branch router
-- `ScaleConsistencyCoupledSAEMNoSpatialGate`
-  Removes the spatial gate
-- `ScaleOnlyCoupledSAEM`
-  Removes native enhancement and keeps only the scale consistency path
+  Full SCC-SAEM including NSR, BR, CSP, CGA, and DSG
 
-Abbreviation definitions:
+Abbreviations:
 
 - `NSR`: native-scale reference construction
 - `BR`: branch router
@@ -151,9 +122,9 @@ Abbreviation definitions:
 
 ## 6. Notes
 
-- When using the Ultralytics CLI directly, such as `yolo detect train ...`, custom modules may not be registered automatically. Using the current Python entry script is safer.
-- The ablation modules in `custom_blocks.py` are mainly used for structural comparison, so please make sure the YAML loaded during training matches the module definitions in your paper table.
-- If you modify custom modules or add new ablation classes, remember to update `register_custom_modules()` accordingly.
+- If you use the Ultralytics CLI directly, such as `yolo detect train ...`, the custom modules may not be registered automatically. The current Python entry script is the safer choice.
+- The ablation modules in `custom_blocks.py` are mainly used for structural comparison, so make sure the YAML loaded during training matches the module definitions used in your paper tables.
+- If you modify custom modules or add new ablation classes, remember to update `register_custom_modules()` as well.
 
 ## References
 
