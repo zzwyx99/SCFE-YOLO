@@ -1,4 +1,4 @@
-# UAV_yolo12
+# SCFE-YOLO
 
 基于 Ultralytics YOLO 的无人机小目标检测实验仓库，当前项目主要围绕 `ScaleConsistencyCoupledSAEM` 展开，数据集以 VisDrone 为主。
 
