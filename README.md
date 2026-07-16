@@ -1,4 +1,4 @@
-# UAV_yolo12
+# SCFE-YOLO
 
 An experimental repository for UAV small-object detection built on Ultralytics YOLO. The current work mainly revolves around `ScaleConsistencyCoupledSAEM`, with VisDrone as the primary dataset.
 
